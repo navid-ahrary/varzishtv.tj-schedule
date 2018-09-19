@@ -1,42 +1,67 @@
 import requests
 from bs4 import BeautifulSoup
-from googletrans import Translator
 
-html = requests.get('http://www.varzishtv.tj/tj/')
+'translate a given list to text by Google translator'
+def translate_list(my_list):
+    from googletrans import Translator
+    
+    'translate list to Google translator object'
+    translated_my_list = Translator().translate(my_list)
+    'convert tranlation object to english text'
+    for i in range(len(translated_my_list)):
+        translated_my_list[i] = translated_my_list[i].text
+    return translated_my_list
 
-bs = BeautifulSoup(html.text, 'lxml')
+def get_html():
+    try:
+        html = requests.get('http://www.varzishtv.tj/')
+    except ConnectionError :
+        print('''Occured "Conecction Error"\nBe relax cause I'm here at service of you ;)''')
+        get_html()
 
-#find all programs list
-all_programs_list = bs.div.find_all('div' , attrs={'class' : 'tv-prog pb-md'})
+    bs = BeautifulSoup(html.text, 'lxml')
 
-#dictionary consist of all programs schedule
-all_programs_dict = {}
+    'find all programs list'
+    all_programs_list = bs.find_all(name='div', attrs='tv-prog pb-md')
+    #print(all_programs_list)
 
-#list of program of one day
-programs_of_a_day = []
+    dates_list = []
+    text_all_program_list = [] 
 
-for program in all_programs_list:
-        if ('Футбол' in program.get_text()) or ('LIVE' in program.get_text()):
-            
-            games_prog = program.get_text().replace("\n", " ").rstrip()
-            
-            programs_of_a_day.append(games_prog)
+    dup_dates_list = []
+    for program in all_programs_list:
 
-            #add all LIVE or football program to dictionary
-            all_programs_dict[program.parent.h4.get_text()] = programs_of_a_day
+        'get text of all programs'
+        text_all_program_list.append(program.get_text().replace("\n", " "))
 
-print(all_programs_dict)
-translated_all_programs_dict = {}
-translated_all_programs_list = []
+        'get text of programs of one day'
+        dates = program.parent.h4.get_text()
+        
+        'add date to date list'
+        if dates not in dates_list:
+            dates_list.append(dates)
+        dup_dates_list.append(dates)
 
-for date in all_programs_dict.keys():
-    translated_date = Translator().translate(str(date)).text
-    print(translated_date)
+    'traslate date list'
+    translated_date_list = translate_list(dates_list)
 
-    for item in all_programs_dict[date]:
-        translated_item = Translator().translate(item).text
-        print(translated_item)
-        translated_all_programs_list.append(translated_item)
-        translated_all_programs_dict[translated_date] = translated_all_programs_list
+    'traslate text all program list'
+    translated_text_all_program_list = translate_list(text_all_program_list)
 
-print(translated_all_programs_dict)
+    'schedule dict consist of dates and programs'
+    all_programs_dict = {}
+    n = 0
+    for i in range(len(dates_list)):
+        m = dup_dates_list.count(dates_list[i])
+        all_programs_dict[translated_date_list[i]] = translated_text_all_program_list[n:m+n]
+        n += m
+
+    for date in all_programs_dict.keys():
+        print(date)
+
+        for program in all_programs_dict[date]:
+            print(program)
+        print()
+
+if __name__ == "__main__":
+    get_html()
